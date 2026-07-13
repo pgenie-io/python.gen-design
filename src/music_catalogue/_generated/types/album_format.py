@@ -4,6 +4,9 @@
 
 from enum import StrEnum
 
+from psycopg import AsyncConnection, Connection
+from psycopg.types.enum import EnumInfo, register_enum
+
 
 class AlbumFormat(StrEnum):
     VINYL = "Vinyl"
@@ -12,3 +15,30 @@ class AlbumFormat(StrEnum):
     DIGITAL = "Digital"
     DVD_AUDIO = "DVD-Audio"
     SACD = "SACD"
+
+
+_album_format_pg_name = "public.album_format"
+
+
+async def register(conn: AsyncConnection[object]) -> None:
+    album_format_info = await EnumInfo.fetch(conn, _album_format_pg_name)
+    if album_format_info is None:
+        raise LookupError(f"enum type {_album_format_pg_name!r} not found; cannot register it")
+    register_enum(
+        album_format_info,
+        conn,
+        AlbumFormat,
+        mapping={member: member.value for member in AlbumFormat},
+    )
+
+
+def register_sync(conn: Connection[object]) -> None:
+    album_format_info = EnumInfo.fetch(conn, _album_format_pg_name)
+    if album_format_info is None:
+        raise LookupError(f"enum type {_album_format_pg_name!r} not found; cannot register it")
+    register_enum(
+        album_format_info,
+        conn,
+        AlbumFormat,
+        mapping={member: member.value for member in AlbumFormat},
+    )
