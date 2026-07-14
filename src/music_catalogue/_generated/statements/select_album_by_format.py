@@ -6,24 +6,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import args_row as _args_row
 
 from .. import types as _db_types
+from .._core import Statement
 from .._runtime import fetch_many as _fetch_many
 from ..sync._runtime import fetch_many as _fetch_many_sync
-
-SQL = """\
-select 
-  id,
-  name,
-  released,
-  format,
-  recording
-from album
-where format = %(format)s
-"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,23 +26,29 @@ class SelectAlbumByFormatRow:
     recording: _db_types.RecordingInfo | None
 
 
-async def select_album_by_format(
-    conn: AsyncConnection[object],
-    *,
-    format: _db_types.AlbumFormat,
-) -> list[SelectAlbumByFormatRow]:
-    params: dict[str, object] = {
-        "format": format,
-    }
-    return await _fetch_many(conn, SQL, params, _args_row(SelectAlbumByFormatRow))
+@dataclass(frozen=True, slots=True)
+class SelectAlbumByFormat(Statement[list[SelectAlbumByFormatRow]]):
+    format: _db_types.AlbumFormat
 
+    SQL: ClassVar[str] = """\
+select
+  id,
+  name,
+  released,
+  format,
+  recording
+from album
+where format = %(format)s
+"""
 
-def select_album_by_format_sync(
-    conn: Connection[object],
-    *,
-    format: _db_types.AlbumFormat,
-) -> list[SelectAlbumByFormatRow]:
-    params: dict[str, object] = {
-        "format": format,
-    }
-    return _fetch_many_sync(conn, SQL, params, _args_row(SelectAlbumByFormatRow))
+    async def execute(self, conn: AsyncConnection[object]) -> list[SelectAlbumByFormatRow]:
+        params: dict[str, object] = {
+            "format": self.format,
+        }
+        return await _fetch_many(conn, self.SQL, params, _args_row(SelectAlbumByFormatRow))
+
+    def execute_sync(self, conn: Connection[object]) -> list[SelectAlbumByFormatRow]:
+        params: dict[str, object] = {
+            "format": self.format,
+        }
+        return _fetch_many_sync(conn, self.SQL, params, _args_row(SelectAlbumByFormatRow))

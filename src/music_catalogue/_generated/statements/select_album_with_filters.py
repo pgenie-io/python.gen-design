@@ -6,15 +6,45 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import args_row as _args_row
 
 from .. import types as _db_types
+from .._core import Statement
 from .._runtime import fetch_many as _fetch_many
 from ..sync._runtime import fetch_many as _fetch_many_sync
 
-SQL = """\
+
+@dataclass(frozen=True, slots=True)
+class SelectAlbumWithFiltersRow:
+    id: int
+    name: str | None
+    released: date | None
+    format: _db_types.AlbumFormat | None
+    recording: _db_types.RecordingInfo | None
+    tracks: list[_db_types.TrackInfo] | None
+    disc: _db_types.DiscInfo | None
+
+
+@dataclass(frozen=True, slots=True)
+class SelectAlbumWithFilters(Statement[list[SelectAlbumWithFiltersRow]]):
+    include_name: bool
+    include_released: bool
+    include_format: bool
+    include_recording: bool
+    include_tracks: bool
+    include_disc: bool
+    artist_name: str | None
+    genre_name: str | None
+    format: _db_types.AlbumFormat | None
+    released_after: datetime | None
+    name_like: str | None
+    order_by_name: bool
+    order_by_released: bool
+
+    SQL: ClassVar[str] = """\
 -- Demonstrates static query equivalent of dynamic field selection.
 -- Boolean flags control which fields are included in the result,
 -- returning NULL for fields the caller opts out of.
@@ -43,83 +73,38 @@ ORDER BY
   CASE WHEN %(order_by_released)s THEN album.released END DESC
 """
 
+    async def execute(self, conn: AsyncConnection[object]) -> list[SelectAlbumWithFiltersRow]:
+        params: dict[str, object] = {
+            "include_name": self.include_name,
+            "include_released": self.include_released,
+            "include_format": self.include_format,
+            "include_recording": self.include_recording,
+            "include_tracks": self.include_tracks,
+            "include_disc": self.include_disc,
+            "artist_name": self.artist_name,
+            "genre_name": self.genre_name,
+            "format": self.format,
+            "released_after": self.released_after,
+            "name_like": self.name_like,
+            "order_by_name": self.order_by_name,
+            "order_by_released": self.order_by_released,
+        }
+        return await _fetch_many(conn, self.SQL, params, _args_row(SelectAlbumWithFiltersRow))
 
-@dataclass(frozen=True, slots=True)
-class SelectAlbumWithFiltersRow:
-    id: int
-    name: str | None
-    released: date | None
-    format: _db_types.AlbumFormat | None
-    recording: _db_types.RecordingInfo | None
-    tracks: list[_db_types.TrackInfo] | None
-    disc: _db_types.DiscInfo | None
-
-
-async def select_album_with_filters(
-    conn: AsyncConnection[object],
-    *,
-    include_name: bool,
-    include_released: bool,
-    include_format: bool,
-    include_recording: bool,
-    include_tracks: bool,
-    include_disc: bool,
-    artist_name: str | None,
-    genre_name: str | None,
-    format: _db_types.AlbumFormat | None,
-    released_after: datetime | None,
-    name_like: str | None,
-    order_by_name: bool,
-    order_by_released: bool,
-) -> list[SelectAlbumWithFiltersRow]:
-    params: dict[str, object] = {
-        "include_name": include_name,
-        "include_released": include_released,
-        "include_format": include_format,
-        "include_recording": include_recording,
-        "include_tracks": include_tracks,
-        "include_disc": include_disc,
-        "artist_name": artist_name,
-        "genre_name": genre_name,
-        "format": format,
-        "released_after": released_after,
-        "name_like": name_like,
-        "order_by_name": order_by_name,
-        "order_by_released": order_by_released,
-    }
-    return await _fetch_many(conn, SQL, params, _args_row(SelectAlbumWithFiltersRow))
-
-
-def select_album_with_filters_sync(
-    conn: Connection[object],
-    *,
-    include_name: bool,
-    include_released: bool,
-    include_format: bool,
-    include_recording: bool,
-    include_tracks: bool,
-    include_disc: bool,
-    artist_name: str | None,
-    genre_name: str | None,
-    format: _db_types.AlbumFormat | None,
-    released_after: datetime | None,
-    name_like: str | None,
-    order_by_name: bool,
-    order_by_released: bool,
-) -> list[SelectAlbumWithFiltersRow]:
-    params: dict[str, object] = {
-        "include_name": include_name,
-        "include_released": include_released,
-        "include_format": include_format,
-        "include_recording": include_recording,
-        "include_tracks": include_tracks,
-        "include_disc": include_disc,
-        "artist_name": artist_name,
-        "genre_name": genre_name,
-        "format": format,
-        "released_after": released_after,
-        "name_like": name_like,
-        "order_by_name": order_by_name,
-        "order_by_released": order_by_released,
-    }
-    return _fetch_many_sync(conn, SQL, params, _args_row(SelectAlbumWithFiltersRow))
+    def execute_sync(self, conn: Connection[object]) -> list[SelectAlbumWithFiltersRow]:
+        params: dict[str, object] = {
+            "include_name": self.include_name,
+            "include_released": self.include_released,
+            "include_format": self.include_format,
+            "include_recording": self.include_recording,
+            "include_tracks": self.include_tracks,
+            "include_disc": self.include_disc,
+            "artist_name": self.artist_name,
+            "genre_name": self.genre_name,
+            "format": self.format,
+            "released_after": self.released_after,
+            "name_like": self.name_like,
+            "order_by_name": self.order_by_name,
+            "order_by_released": self.order_by_released,
+        }
+        return _fetch_many_sync(conn, self.SQL, params, _args_row(SelectAlbumWithFiltersRow))

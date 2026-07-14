@@ -6,24 +6,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import args_row as _args_row
 
 from .. import types as _db_types
+from .._core import Statement
 from .._runtime import fetch_many as _fetch_many
 from ..sync._runtime import fetch_many as _fetch_many_sync
-
-SQL = """\
-select 
-  id,
-  name,
-  released,
-  format,
-  recording
-from album
-where name = %(name)s
-"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,23 +26,29 @@ class SelectAlbumByNameRow:
     recording: _db_types.RecordingInfo | None
 
 
-async def select_album_by_name(
-    conn: AsyncConnection[object],
-    *,
-    name: str,
-) -> list[SelectAlbumByNameRow]:
-    params: dict[str, object] = {
-        "name": name,
-    }
-    return await _fetch_many(conn, SQL, params, _args_row(SelectAlbumByNameRow))
+@dataclass(frozen=True, slots=True)
+class SelectAlbumByName(Statement[list[SelectAlbumByNameRow]]):
+    name: str
 
+    SQL: ClassVar[str] = """\
+select
+  id,
+  name,
+  released,
+  format,
+  recording
+from album
+where name = %(name)s
+"""
 
-def select_album_by_name_sync(
-    conn: Connection[object],
-    *,
-    name: str,
-) -> list[SelectAlbumByNameRow]:
-    params: dict[str, object] = {
-        "name": name,
-    }
-    return _fetch_many_sync(conn, SQL, params, _args_row(SelectAlbumByNameRow))
+    async def execute(self, conn: AsyncConnection[object]) -> list[SelectAlbumByNameRow]:
+        params: dict[str, object] = {
+            "name": self.name,
+        }
+        return await _fetch_many(conn, self.SQL, params, _args_row(SelectAlbumByNameRow))
+
+    def execute_sync(self, conn: Connection[object]) -> list[SelectAlbumByNameRow]:
+        params: dict[str, object] = {
+            "name": self.name,
+        }
+        return _fetch_many_sync(conn, self.SQL, params, _args_row(SelectAlbumByNameRow))

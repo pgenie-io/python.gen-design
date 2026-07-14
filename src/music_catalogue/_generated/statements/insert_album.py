@@ -6,19 +6,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import args_row as _args_row
 
 from .. import types as _db_types
+from .._core import Statement
 from .._runtime import fetch_single as _fetch_single
 from ..sync._runtime import fetch_single as _fetch_single_sync
-
-SQL = """\
-insert into album (name, released, format, recording)
-values (%(name)s, %(released)s, %(format)s, %(recording)s)
-returning id
-"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,35 +22,33 @@ class InsertAlbumRow:
     id: int
 
 
-async def insert_album(
-    conn: AsyncConnection[object],
-    *,
-    name: str,
-    released: date,
-    format: _db_types.AlbumFormat,
-    recording: _db_types.RecordingInfo,
-) -> InsertAlbumRow:
-    params: dict[str, object] = {
-        "name": name,
-        "released": released,
-        "format": format,
-        "recording": recording,
-    }
-    return await _fetch_single(conn, SQL, params, _args_row(InsertAlbumRow))
+@dataclass(frozen=True, slots=True)
+class InsertAlbum(Statement[InsertAlbumRow]):
+    name: str
+    released: date
+    format: _db_types.AlbumFormat
+    recording: _db_types.RecordingInfo
 
+    SQL: ClassVar[str] = """\
+insert into album (name, released, format, recording)
+values (%(name)s, %(released)s, %(format)s, %(recording)s)
+returning id
+"""
 
-def insert_album_sync(
-    conn: Connection[object],
-    *,
-    name: str,
-    released: date,
-    format: _db_types.AlbumFormat,
-    recording: _db_types.RecordingInfo,
-) -> InsertAlbumRow:
-    params: dict[str, object] = {
-        "name": name,
-        "released": released,
-        "format": format,
-        "recording": recording,
-    }
-    return _fetch_single_sync(conn, SQL, params, _args_row(InsertAlbumRow))
+    async def execute(self, conn: AsyncConnection[object]) -> InsertAlbumRow:
+        params: dict[str, object] = {
+            "name": self.name,
+            "released": self.released,
+            "format": self.format,
+            "recording": self.recording,
+        }
+        return await _fetch_single(conn, self.SQL, params, _args_row(InsertAlbumRow))
+
+    def execute_sync(self, conn: Connection[object]) -> InsertAlbumRow:
+        params: dict[str, object] = {
+            "name": self.name,
+            "released": self.released,
+            "format": self.format,
+            "recording": self.recording,
+        }
+        return _fetch_single_sync(conn, self.SQL, params, _args_row(InsertAlbumRow))

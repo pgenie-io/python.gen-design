@@ -6,15 +6,29 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import args_row as _args_row
 
 from .. import types as _db_types
+from .._core import Statement
 from .._runtime import fetch_many as _fetch_many
 from ..sync._runtime import fetch_many as _fetch_many_sync
 
-SQL = """\
+
+@dataclass(frozen=True, slots=True)
+class InsertMultipleAlbumsRow:
+    id: int
+
+
+@dataclass(frozen=True, slots=True)
+class InsertMultipleAlbums(Statement[list[InsertMultipleAlbumsRow]]):
+    name: list[str]
+    released: list[date]
+    format: list[_db_types.AlbumFormat]
+
+    SQL: ClassVar[str] = """\
 -- This is an example of a bulk-insert (batch-insert) technique.
 -- We pass in all fields as arrays of the same size, and we unnest it to insert multiple rows at once.
 insert into album (name, released, format)
@@ -27,37 +41,18 @@ from unnest(
 returning id
 """
 
+    async def execute(self, conn: AsyncConnection[object]) -> list[InsertMultipleAlbumsRow]:
+        params: dict[str, object] = {
+            "name": self.name,
+            "released": self.released,
+            "format": self.format,
+        }
+        return await _fetch_many(conn, self.SQL, params, _args_row(InsertMultipleAlbumsRow))
 
-@dataclass(frozen=True, slots=True)
-class InsertMultipleAlbumsRow:
-    id: int
-
-
-async def insert_multiple_albums(
-    conn: AsyncConnection[object],
-    *,
-    name: list[str],
-    released: list[date],
-    format: list[_db_types.AlbumFormat],
-) -> list[InsertMultipleAlbumsRow]:
-    params: dict[str, object] = {
-        "name": name,
-        "released": released,
-        "format": format,
-    }
-    return await _fetch_many(conn, SQL, params, _args_row(InsertMultipleAlbumsRow))
-
-
-def insert_multiple_albums_sync(
-    conn: Connection[object],
-    *,
-    name: list[str],
-    released: list[date],
-    format: list[_db_types.AlbumFormat],
-) -> list[InsertMultipleAlbumsRow]:
-    params: dict[str, object] = {
-        "name": name,
-        "released": released,
-        "format": format,
-    }
-    return _fetch_many_sync(conn, SQL, params, _args_row(InsertMultipleAlbumsRow))
+    def execute_sync(self, conn: Connection[object]) -> list[InsertMultipleAlbumsRow]:
+        params: dict[str, object] = {
+            "name": self.name,
+            "released": self.released,
+            "format": self.format,
+        }
+        return _fetch_many_sync(conn, self.SQL, params, _args_row(InsertMultipleAlbumsRow))
