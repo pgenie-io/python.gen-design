@@ -8,9 +8,6 @@ from .._generated._core import (
 from .._generated._core import (
     NoRowError as NoRowError,
 )
-from .._generated._register import (
-    register_types_sync as register_types,
-)
 from .._generated.statements.insert_album import (
     InsertAlbumRow as InsertAlbumRow,
 )
@@ -67,6 +64,9 @@ from .._generated.statements.update_album_recording_returning import (
 )
 from .._generated.statements.update_album_released import (
     update_album_released_sync as update_album_released,
+)
+from .._generated.types import (
+    register_types_sync as register_types,
 )
 from .._generated.types.album_format import (
     AlbumFormat as AlbumFormat,

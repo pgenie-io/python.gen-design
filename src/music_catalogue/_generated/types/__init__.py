@@ -2,7 +2,25 @@
 # SPDX-FileCopyrightText: 2026 Viacheslav Shvets
 # SPDX-License-Identifier: MIT-0
 
+from __future__ import annotations
+
+from psycopg import AsyncConnection, Connection
+
 from .album_format import AlbumFormat as AlbumFormat
 from .disc_info import DiscInfo as DiscInfo
 from .recording_info import RecordingInfo as RecordingInfo
 from .track_info import TrackInfo as TrackInfo
+
+
+async def register_types(conn: AsyncConnection[object]) -> None:
+    await album_format.register(conn)
+    await recording_info.register(conn)
+    await track_info.register(conn)
+    await disc_info.register(conn)
+
+
+def register_types_sync(conn: Connection[object]) -> None:
+    album_format.register_sync(conn)
+    recording_info.register_sync(conn)
+    track_info.register_sync(conn)
+    disc_info.register_sync(conn)
