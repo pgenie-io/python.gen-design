@@ -4,6 +4,10 @@
 
 from dataclasses import dataclass
 
+from psycopg import AsyncConnection, Connection
+from psycopg.types.composite import CompositeInfo, register_composite
+
+from .. import _runtime
 from .recording_info import RecordingInfo
 
 
@@ -11,3 +15,33 @@ from .recording_info import RecordingInfo
 class DiscInfo:
     name: str | None
     recording: RecordingInfo | None
+
+
+_disc_info_pg_name = "public.disc_info"
+_disc_info_make_object, _disc_info_make_sequence = _runtime.dataclass_callbacks(DiscInfo)
+
+
+async def register(conn: AsyncConnection[object]) -> None:
+    disc_info_info = await CompositeInfo.fetch(conn, _disc_info_pg_name)
+    if disc_info_info is None:
+        raise LookupError(f"composite type {_disc_info_pg_name!r} not found; cannot register it")
+    register_composite(
+        disc_info_info,
+        conn,
+        DiscInfo,
+        make_object=_disc_info_make_object,
+        make_sequence=_disc_info_make_sequence,
+    )
+
+
+def register_sync(conn: Connection[object]) -> None:
+    disc_info_info = CompositeInfo.fetch(conn, _disc_info_pg_name)
+    if disc_info_info is None:
+        raise LookupError(f"composite type {_disc_info_pg_name!r} not found; cannot register it")
+    register_composite(
+        disc_info_info,
+        conn,
+        DiscInfo,
+        make_object=_disc_info_make_object,
+        make_sequence=_disc_info_make_sequence,
+    )

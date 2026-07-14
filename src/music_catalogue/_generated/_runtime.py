@@ -4,10 +4,14 @@
 
 from __future__ import annotations
 
-from typing import LiteralString
+import keyword
+from collections.abc import Callable, Sequence
+from dataclasses import fields, is_dataclass
+from typing import Any, LiteralString
 
 from psycopg import AsyncConnection
 from psycopg.rows import BaseRowFactory
+from psycopg.types.composite import CompositeInfo
 
 from ._core import NoRowError
 
@@ -67,3 +71,33 @@ async def execute_void(
 ) -> None:
     async with conn.cursor() as cur:
         _ = await cur.execute(sql, params)
+
+
+type _ObjectMaker[T] = Callable[[Sequence[Any], CompositeInfo], T]
+type _SequenceMaker[T] = Callable[[T, CompositeInfo], Sequence[Any]]
+
+
+def dataclass_callbacks[T](cls: type[T]) -> tuple[_ObjectMaker[T], _SequenceMaker[T]]:
+    if not is_dataclass(cls):
+        raise TypeError(f"{cls.__name__} must be a dataclass")
+
+    model_fields = fields(cls)
+    model_names = tuple(field.name for field in model_fields)
+
+    def _python_name(name: str) -> str:
+        if keyword.iskeyword(name):
+            return f"{name}_"
+        return name
+
+    def make_object(values: Sequence[Any], info: CompositeInfo) -> T:
+        names = tuple(_python_name(name) for name in info.field_names)
+        assert names == model_names
+        assert len(values) == len(model_fields)
+        return cls(**dict(zip(names, values, strict=True)))
+
+    def make_sequence(obj: T, info: CompositeInfo) -> Sequence[Any]:
+        names = tuple(_python_name(name) for name in info.field_names)
+        assert names == model_names
+        return tuple(getattr(obj, field.name) for field in model_fields)
+
+    return make_object, make_sequence

@@ -4,9 +4,44 @@
 
 from dataclasses import dataclass
 
+from psycopg import AsyncConnection, Connection
+from psycopg.types.composite import CompositeInfo, register_composite
+
+from .. import _runtime
+
 
 @dataclass(frozen=True, slots=True)
 class TrackInfo:
     title: str
     duration_seconds: int
     tags: list[str]
+
+
+_track_info_pg_name = "public.track_info"
+_track_info_make_object, _track_info_make_sequence = _runtime.dataclass_callbacks(TrackInfo)
+
+
+async def register(conn: AsyncConnection[object]) -> None:
+    track_info_info = await CompositeInfo.fetch(conn, _track_info_pg_name)
+    if track_info_info is None:
+        raise LookupError(f"composite type {_track_info_pg_name!r} not found; cannot register it")
+    register_composite(
+        track_info_info,
+        conn,
+        TrackInfo,
+        make_object=_track_info_make_object,
+        make_sequence=_track_info_make_sequence,
+    )
+
+
+def register_sync(conn: Connection[object]) -> None:
+    track_info_info = CompositeInfo.fetch(conn, _track_info_pg_name)
+    if track_info_info is None:
+        raise LookupError(f"composite type {_track_info_pg_name!r} not found; cannot register it")
+    register_composite(
+        track_info_info,
+        conn,
+        TrackInfo,
+        make_object=_track_info_make_object,
+        make_sequence=_track_info_make_sequence,
+    )

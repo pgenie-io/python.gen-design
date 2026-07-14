@@ -6,6 +6,11 @@ from dataclasses import dataclass
 
 from datetime import date
 
+from psycopg import AsyncConnection, Connection
+from psycopg.types.composite import CompositeInfo, register_composite
+
+from .. import _runtime
+
 
 @dataclass(frozen=True, slots=True)
 class RecordingInfo:
@@ -13,3 +18,33 @@ class RecordingInfo:
     city: str
     country: str
     recorded_date: date
+
+
+_recording_info_pg_name = "public.recording_info"
+_recording_info_make_object, _recording_info_make_sequence = _runtime.dataclass_callbacks(RecordingInfo)
+
+
+async def register(conn: AsyncConnection[object]) -> None:
+    recording_info_info = await CompositeInfo.fetch(conn, _recording_info_pg_name)
+    if recording_info_info is None:
+        raise LookupError(f"composite type {_recording_info_pg_name!r} not found; cannot register it")
+    register_composite(
+        recording_info_info,
+        conn,
+        RecordingInfo,
+        make_object=_recording_info_make_object,
+        make_sequence=_recording_info_make_sequence,
+    )
+
+
+def register_sync(conn: Connection[object]) -> None:
+    recording_info_info = CompositeInfo.fetch(conn, _recording_info_pg_name)
+    if recording_info_info is None:
+        raise LookupError(f"composite type {_recording_info_pg_name!r} not found; cannot register it")
+    register_composite(
+        recording_info_info,
+        conn,
+        RecordingInfo,
+        make_object=_recording_info_make_object,
+        make_sequence=_recording_info_make_sequence,
+    )
