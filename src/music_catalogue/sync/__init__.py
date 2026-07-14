@@ -8,35 +8,68 @@ from .._generated._core import (
 from .._generated._core import (
     NoRowError as NoRowError,
 )
+from .._generated._core import (
+    Statement as Statement,
+)
 from .._generated._register import (
     register_types_sync as register_types,
+)
+from .._generated.statements.insert_album import (
+    InsertAlbum as InsertAlbum,
 )
 from .._generated.statements.insert_album import (
     InsertAlbumRow as InsertAlbumRow,
 )
 from .._generated.statements.insert_multiple_albums import (
+    InsertMultipleAlbums as InsertMultipleAlbums,
+)
+from .._generated.statements.insert_multiple_albums import (
     InsertMultipleAlbumsRow as InsertMultipleAlbumsRow,
+)
+from .._generated.statements.select_album_by_format import (
+    SelectAlbumByFormat as SelectAlbumByFormat,
 )
 from .._generated.statements.select_album_by_format import (
     SelectAlbumByFormatRow as SelectAlbumByFormatRow,
 )
 from .._generated.statements.select_album_by_id import (
+    SelectAlbumById as SelectAlbumById,
+)
+from .._generated.statements.select_album_by_id import (
     SelectAlbumByIdRow as SelectAlbumByIdRow,
+)
+from .._generated.statements.select_album_by_name import (
+    SelectAlbumByName as SelectAlbumByName,
 )
 from .._generated.statements.select_album_by_name import (
     SelectAlbumByNameRow as SelectAlbumByNameRow,
 )
 from .._generated.statements.select_album_with_filters import (
+    SelectAlbumWithFilters as SelectAlbumWithFilters,
+)
+from .._generated.statements.select_album_with_filters import (
     SelectAlbumWithFiltersRow as SelectAlbumWithFiltersRow,
+)
+from .._generated.statements.select_album_with_tracks import (
+    SelectAlbumWithTracks as SelectAlbumWithTracks,
 )
 from .._generated.statements.select_album_with_tracks import (
     SelectAlbumWithTracksRow as SelectAlbumWithTracksRow,
 )
 from .._generated.statements.select_genre_by_artist import (
+    SelectGenreByArtist as SelectGenreByArtist,
+)
+from .._generated.statements.select_genre_by_artist import (
     SelectGenreByArtistRow as SelectGenreByArtistRow,
 )
 from .._generated.statements.update_album_recording_returning import (
+    UpdateAlbumRecordingReturning as UpdateAlbumRecordingReturning,
+)
+from .._generated.statements.update_album_recording_returning import (
     UpdateAlbumRecordingReturningRow as UpdateAlbumRecordingReturningRow,
+)
+from .._generated.statements.update_album_released import (
+    UpdateAlbumReleased as UpdateAlbumReleased,
 )
 from .._generated.types.album_format import (
     AlbumFormat as AlbumFormat,
@@ -54,6 +87,7 @@ from .._generated.types.track_info import (
 __all__ = [
     "JsonValue",
     "NoRowError",
+    "Statement",
 ]
 __all__ += [
     "AlbumFormat",
@@ -71,6 +105,18 @@ __all__ += [
     "SelectAlbumWithTracksRow",
     "SelectGenreByArtistRow",
     "UpdateAlbumRecordingReturningRow",
+]
+__all__ += [
+    "InsertAlbum",
+    "InsertMultipleAlbums",
+    "SelectAlbumByFormat",
+    "SelectAlbumById",
+    "SelectAlbumByName",
+    "SelectAlbumWithFilters",
+    "SelectAlbumWithTracks",
+    "SelectGenreByArtist",
+    "UpdateAlbumRecordingReturning",
+    "UpdateAlbumReleased",
 ]
 __all__ += [
     "register_types",
