@@ -21,3 +21,4 @@
 
 # Ignore noise:
 .DS_Store
+*.pyc
