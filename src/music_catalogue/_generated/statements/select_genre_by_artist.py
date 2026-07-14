@@ -5,20 +5,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import args_row as _args_row
 
+from .._core import Statement
 from .._runtime import fetch_many as _fetch_many
 from ..sync._runtime import fetch_many as _fetch_many_sync
-
-SQL = """\
-select id, genre.name
-from genre
-left join album_genre on album_genre.genre = genre.id
-left join album_artist on album_artist.album = album_genre.album
-where album_artist.artist = %(artist)s
-"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,23 +21,26 @@ class SelectGenreByArtistRow:
     name: str
 
 
-async def select_genre_by_artist(
-    conn: AsyncConnection[object],
-    *,
-    artist: int,
-) -> list[SelectGenreByArtistRow]:
-    params: dict[str, object] = {
-        "artist": artist,
-    }
-    return await _fetch_many(conn, SQL, params, _args_row(SelectGenreByArtistRow))
+@dataclass(frozen=True, slots=True)
+class SelectGenreByArtist(Statement[list[SelectGenreByArtistRow]]):
+    artist: int
 
+    SQL: ClassVar[str] = """\
+select id, genre.name
+from genre
+left join album_genre on album_genre.genre = genre.id
+left join album_artist on album_artist.album = album_genre.album
+where album_artist.artist = %(artist)s
+"""
 
-def select_genre_by_artist_sync(
-    conn: Connection[object],
-    *,
-    artist: int,
-) -> list[SelectGenreByArtistRow]:
-    params: dict[str, object] = {
-        "artist": artist,
-    }
-    return _fetch_many_sync(conn, SQL, params, _args_row(SelectGenreByArtistRow))
+    async def execute(self, conn: AsyncConnection[object]) -> list[SelectGenreByArtistRow]:
+        params: dict[str, object] = {
+            "artist": self.artist,
+        }
+        return await _fetch_many(conn, self.SQL, params, _args_row(SelectGenreByArtistRow))
+
+    def execute_sync(self, conn: Connection[object]) -> list[SelectGenreByArtistRow]:
+        params: dict[str, object] = {
+            "artist": self.artist,
+        }
+        return _fetch_many_sync(conn, self.SQL, params, _args_row(SelectGenreByArtistRow))

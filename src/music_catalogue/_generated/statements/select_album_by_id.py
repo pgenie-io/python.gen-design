@@ -6,21 +6,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import args_row as _args_row
 
 from .. import types as _db_types
+from .._core import Statement
 from .._runtime import fetch_optional as _fetch_optional
 from ..sync._runtime import fetch_optional as _fetch_optional_sync
-
-SQL = """\
--- Example of a query selecting 0 or 1 row.
-select *
-from album
-where id = %(id)s
-limit 1
-"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,23 +28,26 @@ class SelectAlbumByIdRow:
     disc: _db_types.DiscInfo | None
 
 
-async def select_album_by_id(
-    conn: AsyncConnection[object],
-    *,
-    id: int | None,
-) -> SelectAlbumByIdRow | None:
-    params: dict[str, object] = {
-        "id": id,
-    }
-    return await _fetch_optional(conn, SQL, params, _args_row(SelectAlbumByIdRow))
+@dataclass(frozen=True, slots=True)
+class SelectAlbumById(Statement[SelectAlbumByIdRow | None]):
+    id: int | None
 
+    SQL: ClassVar[str] = """\
+-- Example of a query selecting 0 or 1 row.
+select *
+from album
+where id = %(id)s
+limit 1
+"""
 
-def select_album_by_id_sync(
-    conn: Connection[object],
-    *,
-    id: int | None,
-) -> SelectAlbumByIdRow | None:
-    params: dict[str, object] = {
-        "id": id,
-    }
-    return _fetch_optional_sync(conn, SQL, params, _args_row(SelectAlbumByIdRow))
+    async def execute(self, conn: AsyncConnection[object]) -> SelectAlbumByIdRow | None:
+        params: dict[str, object] = {
+            "id": self.id,
+        }
+        return await _fetch_optional(conn, self.SQL, params, _args_row(SelectAlbumByIdRow))
+
+    def execute_sync(self, conn: Connection[object]) -> SelectAlbumByIdRow | None:
+        params: dict[str, object] = {
+            "id": self.id,
+        }
+        return _fetch_optional_sync(conn, self.SQL, params, _args_row(SelectAlbumByIdRow))

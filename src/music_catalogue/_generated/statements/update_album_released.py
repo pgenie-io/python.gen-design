@@ -4,41 +4,38 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 
+from .._core import Statement
 from .._runtime import execute_rows_affected as _execute_rows_affected
 from ..sync._runtime import execute_rows_affected as _execute_rows_affected_sync
 
-SQL = """\
+
+@dataclass(frozen=True, slots=True)
+class UpdateAlbumReleased(Statement[int]):
+    released: date | None
+    id: int
+
+    SQL: ClassVar[str] = """\
 update album
 set released = %(released)s
 where id = %(id)s
 """
 
+    async def execute(self, conn: AsyncConnection[object]) -> int:
+        params: dict[str, object] = {
+            "released": self.released,
+            "id": self.id,
+        }
+        return await _execute_rows_affected(conn, self.SQL, params)
 
-async def update_album_released(
-    conn: AsyncConnection[object],
-    *,
-    released: date | None,
-    id: int,
-) -> int:
-    params: dict[str, object] = {
-        "released": released,
-        "id": id,
-    }
-    return await _execute_rows_affected(conn, SQL, params)
-
-
-def update_album_released_sync(
-    conn: Connection[object],
-    *,
-    released: date | None,
-    id: int,
-) -> int:
-    params: dict[str, object] = {
-        "released": released,
-        "id": id,
-    }
-    return _execute_rows_affected_sync(conn, SQL, params)
+    def execute_sync(self, conn: Connection[object]) -> int:
+        params: dict[str, object] = {
+            "released": self.released,
+            "id": self.id,
+        }
+        return _execute_rows_affected_sync(conn, self.SQL, params)

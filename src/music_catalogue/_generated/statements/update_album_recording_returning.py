@@ -6,21 +6,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import ClassVar
 
 from psycopg import AsyncConnection, Connection
 from psycopg.rows import args_row as _args_row
 
 from .. import types as _db_types
+from .._core import Statement
 from .._runtime import fetch_many as _fetch_many
 from ..sync._runtime import fetch_many as _fetch_many_sync
-
-SQL = """\
--- Update album recording information
-update album
-set recording = %(recording)s
-where id = %(id)s
-returning *
-"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,27 +28,29 @@ class UpdateAlbumRecordingReturningRow:
     disc: _db_types.DiscInfo | None
 
 
-async def update_album_recording_returning(
-    conn: AsyncConnection[object],
-    *,
-    recording: _db_types.RecordingInfo | None,
-    id: int,
-) -> list[UpdateAlbumRecordingReturningRow]:
-    params: dict[str, object] = {
-        "recording": recording,
-        "id": id,
-    }
-    return await _fetch_many(conn, SQL, params, _args_row(UpdateAlbumRecordingReturningRow))
+@dataclass(frozen=True, slots=True)
+class UpdateAlbumRecordingReturning(Statement[list[UpdateAlbumRecordingReturningRow]]):
+    recording: _db_types.RecordingInfo | None
+    id: int
 
+    SQL: ClassVar[str] = """\
+-- Update album recording information
+update album
+set recording = %(recording)s
+where id = %(id)s
+returning *
+"""
 
-def update_album_recording_returning_sync(
-    conn: Connection[object],
-    *,
-    recording: _db_types.RecordingInfo | None,
-    id: int,
-) -> list[UpdateAlbumRecordingReturningRow]:
-    params: dict[str, object] = {
-        "recording": recording,
-        "id": id,
-    }
-    return _fetch_many_sync(conn, SQL, params, _args_row(UpdateAlbumRecordingReturningRow))
+    async def execute(self, conn: AsyncConnection[object]) -> list[UpdateAlbumRecordingReturningRow]:
+        params: dict[str, object] = {
+            "recording": self.recording,
+            "id": self.id,
+        }
+        return await _fetch_many(conn, self.SQL, params, _args_row(UpdateAlbumRecordingReturningRow))
+
+    def execute_sync(self, conn: Connection[object]) -> list[UpdateAlbumRecordingReturningRow]:
+        params: dict[str, object] = {
+            "recording": self.recording,
+            "id": self.id,
+        }
+        return _fetch_many_sync(conn, self.SQL, params, _args_row(UpdateAlbumRecordingReturningRow))

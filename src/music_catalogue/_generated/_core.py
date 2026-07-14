@@ -6,6 +6,10 @@
 
 from __future__ import annotations
 
+from typing import ClassVar, Protocol
+
+from psycopg import AsyncConnection, Connection
+
 type JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
@@ -15,3 +19,13 @@ class NoRowError(RuntimeError):
     def __init__(self, sql: str) -> None:
         self.sql = sql
         super().__init__(f"single-row query returned no rows: {sql}")
+
+
+class Statement[R](Protocol):
+    # SQL is exposed on the class itself so generic concerns (logging, metrics, tracing)
+    # can read it off any statement without executing it.
+    SQL: ClassVar[str]
+
+    async def execute(self, conn: AsyncConnection[object]) -> R: ...
+
+    def execute_sync(self, conn: Connection[object]) -> R: ...
